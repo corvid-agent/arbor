@@ -1,0 +1,53 @@
+{
+  "name": "arbor-tree",
+  "version": "0.1.0",
+  "description": "Fast, beautiful directory tree CLI with file icons, git status, .gitignore support, and smart filtering. Zero deps. TypeScript-first.",
+  "type": "module",
+  "bin": {
+    "arbor": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "node --test 'dist/test/*.test.js'",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/corvid-agent/arbor.git"
+  },
+  "keywords": [
+    "tree",
+    "directory",
+    "cli",
+    "file-tree",
+    "git-status",
+    "gitignore",
+    "terminal",
+    "typescript"
+  ],
+  "author": "corvid-agent",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "bugs": {
+    "url": "https://github.com/corvid-agent/arbor/issues"
+  },
+  "homepage": "https://github.com/corvid-agent/arbor#readme"
+}
