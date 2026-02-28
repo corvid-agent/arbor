@@ -51,7 +51,7 @@ describe('walkTree', () => {
     const tree = walkTree({ ...defaultOptions, root: testDir, maxDepth: 1, showGitStatus: false });
     const src = tree.children.find(c => c.name === 'src');
     assert.ok(src, 'should have src');
-    assert.equal(src.children.length, 0, 'src should have no children at depth 1');
+    assert.equal(src!.children.length, 0, 'src should have no children at depth 1');
   });
 
   it('filters by pattern', () => {
@@ -109,43 +109,43 @@ describe('walkTree symlinks', () => {
     const tree = walkTree({ ...defaultOptions, root: testDir, showGitStatus: false });
     const link = tree.children.find(c => c.name === 'link-to-file.txt');
     assert.ok(link, 'should find link-to-file.txt');
-    assert.equal(link.isSymlink, true);
-    assert.ok(link.symlinkTarget, 'should have symlinkTarget');
-    assert.equal(link.isBrokenSymlink, false);
+    assert.equal(link!.isSymlink, true);
+    assert.ok(link!.symlinkTarget, 'should have symlinkTarget');
+    assert.equal(link!.isBrokenSymlink, false);
   });
 
   it('detects symlink to directory', () => {
     const tree = walkTree({ ...defaultOptions, root: testDir, showGitStatus: false });
     const link = tree.children.find(c => c.name === 'link-to-dir');
     assert.ok(link, 'should find link-to-dir');
-    assert.equal(link.isSymlink, true);
-    assert.equal(link.isDirectory, true);
-    assert.ok(link.symlinkTarget, 'should have symlinkTarget');
+    assert.equal(link!.isSymlink, true);
+    assert.equal(link!.isDirectory, true);
+    assert.ok(link!.symlinkTarget, 'should have symlinkTarget');
   });
 
   it('detects broken symlink', () => {
     const tree = walkTree({ ...defaultOptions, root: testDir, showGitStatus: false });
     const link = tree.children.find(c => c.name === 'broken-link');
     assert.ok(link, 'should find broken-link');
-    assert.equal(link.isSymlink, true);
-    assert.equal(link.isBrokenSymlink, true);
-    assert.ok(link.symlinkTarget, 'should have symlinkTarget');
+    assert.equal(link!.isSymlink, true);
+    assert.equal(link!.isBrokenSymlink, true);
+    assert.ok(link!.symlinkTarget, 'should have symlinkTarget');
   });
 
   it('follows symlink directories by default', () => {
     const tree = walkTree({ ...defaultOptions, root: testDir, showGitStatus: false });
     const link = tree.children.find(c => c.name === 'link-to-dir');
     assert.ok(link, 'should find link-to-dir');
-    assert.ok(link.children.length > 0, 'should have children when following symlinks');
+    assert.ok(link!.children.length > 0, 'should have children when following symlinks');
   });
 
   it('does not follow symlink directories with followSymlinks=false', () => {
     const tree = walkTree({ ...defaultOptions, root: testDir, showGitStatus: false, followSymlinks: false });
     const link = tree.children.find(c => c.name === 'link-to-dir');
     assert.ok(link, 'should find link-to-dir');
-    assert.equal(link.children.length, 0, 'should have no children when not following symlinks');
-    assert.equal(link.isSymlink, true);
-    assert.equal(link.isDirectory, true);
+    assert.equal(link!.children.length, 0, 'should have no children when not following symlinks');
+    assert.equal(link!.isSymlink, true);
+    assert.equal(link!.isDirectory, true);
   });
 });
 
