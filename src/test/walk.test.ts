@@ -1,6 +1,6 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { walkTree } from '../walk.js';
@@ -81,6 +81,71 @@ describe('walkTree', () => {
       const firstFileIdx = tree.children.indexOf(files[0]!);
       assert.ok(lastDirIdx < firstFileIdx, 'directories should come before files');
     }
+  });
+});
+
+describe('walkTree symlinks', () => {
+  const testDir = join(tmpdir(), 'arbor-symlink-test-' + Date.now());
+
+  before(() => {
+    // Create a test directory structure with symlinks
+    mkdirSync(join(testDir, 'real-dir'), { recursive: true });
+    writeFileSync(join(testDir, 'real-file.txt'), 'hello');
+    writeFileSync(join(testDir, 'real-dir', 'nested.txt'), 'nested');
+
+    // Symlink to a file
+    symlinkSync(join(testDir, 'real-file.txt'), join(testDir, 'link-to-file.txt'));
+    // Symlink to a directory
+    symlinkSync(join(testDir, 'real-dir'), join(testDir, 'link-to-dir'));
+    // Broken symlink (target does not exist)
+    symlinkSync(join(testDir, 'nonexistent'), join(testDir, 'broken-link'));
+  });
+
+  after(() => {
+    rmSync(testDir, { recursive: true, force: true });
+  });
+
+  it('detects symlink to file', () => {
+    const tree = walkTree({ ...defaultOptions, root: testDir, showGitStatus: false });
+    const link = tree.children.find(c => c.name === 'link-to-file.txt');
+    assert.ok(link, 'should find link-to-file.txt');
+    assert.equal(link.isSymlink, true);
+    assert.ok(link.symlinkTarget, 'should have symlinkTarget');
+    assert.equal(link.isBrokenSymlink, false);
+  });
+
+  it('detects symlink to directory', () => {
+    const tree = walkTree({ ...defaultOptions, root: testDir, showGitStatus: false });
+    const link = tree.children.find(c => c.name === 'link-to-dir');
+    assert.ok(link, 'should find link-to-dir');
+    assert.equal(link.isSymlink, true);
+    assert.equal(link.isDirectory, true);
+    assert.ok(link.symlinkTarget, 'should have symlinkTarget');
+  });
+
+  it('detects broken symlink', () => {
+    const tree = walkTree({ ...defaultOptions, root: testDir, showGitStatus: false });
+    const link = tree.children.find(c => c.name === 'broken-link');
+    assert.ok(link, 'should find broken-link');
+    assert.equal(link.isSymlink, true);
+    assert.equal(link.isBrokenSymlink, true);
+    assert.ok(link.symlinkTarget, 'should have symlinkTarget');
+  });
+
+  it('follows symlink directories by default', () => {
+    const tree = walkTree({ ...defaultOptions, root: testDir, showGitStatus: false });
+    const link = tree.children.find(c => c.name === 'link-to-dir');
+    assert.ok(link, 'should find link-to-dir');
+    assert.ok(link.children.length > 0, 'should have children when following symlinks');
+  });
+
+  it('does not follow symlink directories with followSymlinks=false', () => {
+    const tree = walkTree({ ...defaultOptions, root: testDir, showGitStatus: false, followSymlinks: false });
+    const link = tree.children.find(c => c.name === 'link-to-dir');
+    assert.ok(link, 'should find link-to-dir');
+    assert.equal(link.children.length, 0, 'should have no children when not following symlinks');
+    assert.equal(link.isSymlink, true);
+    assert.equal(link.isDirectory, true);
   });
 });
 

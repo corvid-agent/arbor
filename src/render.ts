@@ -40,7 +40,20 @@ export function renderTree(root: TreeNode, options: ArborOptions): string {
       }
 
       // Name with color
-      line += colorFile(child.name, child.isDirectory);
+      if (child.isBrokenSymlink) {
+        line += red(child.name);
+      } else {
+        line += colorFile(child.name, child.isDirectory);
+      }
+
+      // Symlink target
+      if (child.isSymlink && child.symlinkTarget) {
+        if (child.isBrokenSymlink) {
+          line += ` ${red('->')} ${red(child.symlinkTarget)} ${yellow('[broken]')}`;
+        } else {
+          line += ` ${dim('->')} ${dim(child.symlinkTarget)}`;
+        }
+      }
 
       // Size
       if (options.showSize) {
