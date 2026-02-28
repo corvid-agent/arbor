@@ -1,4 +1,4 @@
-import { readdirSync, statSync } from 'node:fs';
+import { readdirSync, statSync, lstatSync, readlinkSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { ArborOptions, TreeNode, GitStatus } from './types.js';
 import { GitignoreFilter } from './gitignore.js';
@@ -28,6 +28,9 @@ export function walkTree(options: ArborOptions): TreeNode {
   // Build pattern matcher
   const patternMatcher = options.pattern ? buildPatternMatcher(options.pattern) : null;
 
+  // Track visited real paths to detect symlink cycles
+  const visitedRealPaths = new Set<string>();
+
   function walk(dir: string, depth: number): TreeNode {
     const stat = statSync(dir);
     const name = dir === rootPath ? '.' : dir.split('/').pop()!;
@@ -41,6 +44,9 @@ export function walkTree(options: ArborOptions): TreeNode {
       children: [],
       gitStatus: null,
       depth,
+      isSymlink: false,
+      symlinkTarget: null,
+      isBrokenSymlink: false,
     };
 
     if (!stat.isDirectory()) {
@@ -76,25 +82,115 @@ export function walkTree(options: ArborOptions): TreeNode {
 
       const fullPath = join(dir, entry);
 
-      let entryStat;
+      let lStat;
       try {
-        entryStat = statSync(fullPath);
+        lStat = lstatSync(fullPath);
       } catch {
-        continue; // Broken symlink, etc.
+        continue;
       }
 
-      const isDir = entryStat.isDirectory();
+      const isSymlink = lStat.isSymbolicLink();
+      let symlinkTarget: string | null = null;
+      let isBrokenSymlink = false;
+      let entryStat = lStat;
+
+      if (isSymlink) {
+        symlinkTarget = readlinkSync(fullPath);
+        try {
+          entryStat = statSync(fullPath);
+        } catch {
+          isBrokenSymlink = true;
+        }
+      }
+
+      const isDir = !isBrokenSymlink && entryStat.isDirectory();
 
       // Skip gitignored
       if (gitignoreFilter?.isIgnored(fullPath, isDir)) continue;
 
-      // Dirs-only mode
+      // Dirs-only mode (but keep broken symlinks visible if they would have been dirs)
       if (options.dirsOnly && !isDir) continue;
 
       // Pattern filter (don't filter directories — they may contain matches)
       if (patternMatcher && !isDir && !patternMatcher(entry)) continue;
 
+      // For symlink directories: check follow option and cycle detection
+      if (isSymlink && isDir) {
+        if (!options.followSymlinks) {
+          // Don't recurse — just add as a leaf node
+          const child: TreeNode = {
+            name: entry,
+            path: fullPath,
+            isDirectory: true,
+            size: entryStat.size,
+            modifiedMs: entryStat.mtimeMs,
+            children: [],
+            gitStatus: null,
+            depth: depth + 1,
+            isSymlink: true,
+            symlinkTarget,
+            isBrokenSymlink: false,
+          };
+          if (gitRoot && gitStatusMap) {
+            child.gitStatus = getFileGitStatus(fullPath, rootPath, gitRoot, gitStatusMap);
+          }
+          children.push(child);
+          continue;
+        }
+
+        // Cycle detection: resolve real path and skip if already visited
+        try {
+          const realPath = realpathSync(fullPath);
+          if (visitedRealPaths.has(realPath)) {
+            const child: TreeNode = {
+              name: entry,
+              path: fullPath,
+              isDirectory: true,
+              size: 0,
+              modifiedMs: entryStat.mtimeMs,
+              children: [],
+              gitStatus: null,
+              depth: depth + 1,
+              isSymlink: true,
+              symlinkTarget,
+              isBrokenSymlink: false,
+            };
+            children.push(child);
+            continue;
+          }
+          visitedRealPaths.add(realPath);
+        } catch {
+          // If we can't resolve real path, skip to be safe
+          continue;
+        }
+      }
+
+      // For broken symlinks, add as a leaf node
+      if (isBrokenSymlink) {
+        const child: TreeNode = {
+          name: entry,
+          path: fullPath,
+          isDirectory: false,
+          size: 0,
+          modifiedMs: lStat.mtimeMs,
+          children: [],
+          gitStatus: null,
+          depth: depth + 1,
+          isSymlink: true,
+          symlinkTarget,
+          isBrokenSymlink: true,
+        };
+        if (gitRoot && gitStatusMap) {
+          child.gitStatus = getFileGitStatus(fullPath, rootPath, gitRoot, gitStatusMap);
+        }
+        children.push(child);
+        continue;
+      }
+
       const child = walk(fullPath, depth + 1);
+      child.isSymlink = isSymlink;
+      child.symlinkTarget = symlinkTarget;
+      child.isBrokenSymlink = isBrokenSymlink;
 
       // If pattern is set and this is a directory with no children, skip it
       if (patternMatcher && isDir && child.children.length === 0) continue;

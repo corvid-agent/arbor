@@ -26,6 +26,8 @@ export interface ArborOptions {
   sortBy: 'name' | 'size' | 'modified';
   /** Reverse sort order */
   reverse: boolean;
+  /** Follow symlinks into directories (default true) */
+  followSymlinks: boolean;
 }
 
 export const defaultOptions: ArborOptions = {
@@ -42,6 +44,7 @@ export const defaultOptions: ArborOptions = {
   showSummary: true,
   sortBy: 'name',
   reverse: false,
+  followSymlinks: true,
 };
 
 /** A node in the file tree */
@@ -54,6 +57,9 @@ export interface TreeNode {
   children: TreeNode[];
   gitStatus: GitStatus | null;
   depth: number;
+  isSymlink: boolean;
+  symlinkTarget: string | null;
+  isBrokenSymlink: boolean;
 }
 
 /** Git status for a file */

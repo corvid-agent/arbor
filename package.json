@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "node --test 'dist/test/*.test.js'",
+    "test": "node --test dist/test/*.test.js",
     "lint": "tsc --noEmit",
     "prepublishOnly": "npm run build"
   },
@@ -41,6 +41,7 @@
   "author": "corvid-agent",
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "^25.3.2",
     "typescript": "^5.7.0"
   },
   "engines": {

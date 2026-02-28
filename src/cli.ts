@@ -21,6 +21,7 @@ Options:
   --no-gitignore         Don't respect .gitignore files
   -D, --dirs-only        Only show directories
   -p, --pattern <glob>   Filter files by glob pattern (e.g. '*.ts')
+  --no-follow            Don't follow symlinks into directories
   --no-color             Disable color output
   --no-summary           Disable summary line
   --sort <key>           Sort by: name, size, modified (default: name)
@@ -106,6 +107,10 @@ function parseArgs(args: string[]): ArborOptions {
         options.pattern = val;
         break;
       }
+
+      case '--no-follow':
+        options.followSymlinks = false;
+        break;
 
       case '--no-color':
         options.noColor = true;
