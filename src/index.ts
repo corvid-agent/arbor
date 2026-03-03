@@ -1,5 +1,6 @@
 export { walkTree } from './walk.js';
 export { renderTree } from './render.js';
+export { formatJson, formatPaths, formatCsv } from './format.js';
 export { getIcon } from './icons.js';
 export { formatSize } from './size.js';
 export { setColorEnabled } from './color.js';

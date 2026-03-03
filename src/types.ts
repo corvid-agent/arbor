@@ -28,6 +28,8 @@ export interface ArborOptions {
   reverse: boolean;
   /** Follow symlinks into directories (default true) */
   followSymlinks: boolean;
+  /** Output format: 'tree' (default), 'json', 'paths', 'csv' */
+  outputFormat: 'tree' | 'json' | 'paths' | 'csv';
 }
 
 export const defaultOptions: ArborOptions = {
@@ -45,6 +47,7 @@ export const defaultOptions: ArborOptions = {
   sortBy: 'name',
   reverse: false,
   followSymlinks: true,
+  outputFormat: 'tree',
 };
 
 /** A node in the file tree */

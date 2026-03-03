@@ -3,6 +3,7 @@
 import { resolve } from 'node:path';
 import { walkTree } from './walk.js';
 import { renderTree } from './render.js';
+import { formatJson, formatPaths, formatCsv } from './format.js';
 import { setColorEnabled } from './color.js';
 import { defaultOptions, type ArborOptions } from './types.js';
 
@@ -26,6 +27,9 @@ Options:
   --no-summary           Disable summary line
   --sort <key>           Sort by: name, size, modified (default: name)
   -r, --reverse          Reverse sort order
+  --json                 Output as JSON
+  --paths                Output flat list of paths (like find)
+  --csv                  Output as CSV (path, type, size, modified, git_status)
   -h, --help             Show this help
   -v, --version          Show version
 
@@ -36,6 +40,9 @@ Examples:
   arbor -p '*.ts'        Show only TypeScript files
   arbor -d 2             Show tree to depth 2
   arbor --sort size -r   Show largest files first
+  arbor --json | jq '.children[].name'
+  arbor --paths           Flat list for piping
+  arbor --csv > tree.csv  Export for spreadsheets
 `);
 }
 
@@ -135,6 +142,18 @@ function parseArgs(args: string[]): ArborOptions {
         options.reverse = true;
         break;
 
+      case '--json':
+        options.outputFormat = 'json';
+        break;
+
+      case '--paths':
+        options.outputFormat = 'paths';
+        break;
+
+      case '--csv':
+        options.outputFormat = 'csv';
+        break;
+
       default:
         if (arg.startsWith('-')) {
           console.error(`Unknown option: ${arg}`);
@@ -155,14 +174,31 @@ function parseArgs(args: string[]): ArborOptions {
 function main(): void {
   const options = parseArgs(process.argv.slice(2));
 
-  // Detect color support
-  if (options.noColor || !process.stdout.isTTY || process.env['NO_COLOR']) {
+  // Disable color for non-tree formats or when explicitly requested
+  if (options.noColor || options.outputFormat !== 'tree' || !process.stdout.isTTY || process.env['NO_COLOR']) {
     setColorEnabled(false);
   }
 
   try {
     const tree = walkTree(options);
-    const output = renderTree(tree, options);
+    let output: string;
+
+    switch (options.outputFormat) {
+      case 'json':
+        output = formatJson(tree, options);
+        break;
+      case 'paths':
+        output = formatPaths(tree);
+        break;
+      case 'csv':
+        output = formatCsv(tree, options);
+        break;
+      case 'tree':
+      default:
+        output = renderTree(tree, options);
+        break;
+    }
+
     console.log(output);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
