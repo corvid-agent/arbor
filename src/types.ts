@@ -75,3 +75,19 @@ export type GitStatus =
   | 'ignored'
   | 'staged'
   | null;
+
+/** Diff status for tree comparison */
+export type DiffStatus = 'added' | 'removed' | 'modified' | 'unchanged';
+
+/** A node in a diff tree */
+export interface DiffNode {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  status: DiffStatus;
+  /** Size in left tree (0 if added) */
+  sizeLeft: number;
+  /** Size in right tree (0 if removed) */
+  sizeRight: number;
+  children: DiffNode[];
+}
